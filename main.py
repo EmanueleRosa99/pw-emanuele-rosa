@@ -31,6 +31,7 @@ def main():
         quantita,
         tempo_per_unita,
         capacita_giornaliera_per_prodotto,
+        capacita_giornaliera_complessiva,
         impianto,
         ore_per_giorno=24
     )

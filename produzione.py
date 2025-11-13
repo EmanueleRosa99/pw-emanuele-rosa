@@ -95,6 +95,7 @@ def calcola_tempo_produzione_lotto(
     quantita: Dict[Prodotto, int],
     tempo_per_unita: Dict[Prodotto, float],
     capacita_giornaliera_per_prodotto: Dict[Prodotto, int],
+    capacita_giornaliera_complessiva: int,
     impianto: Impianto,
     ore_per_giorno: int = 24
 ) -> Dict[str, object]:
@@ -135,6 +136,7 @@ def calcola_tempo_produzione_lotto(
         "quantita": quantita,
         "tempo_per_unita": tempo_per_unita,
         "capacita_giornaliera_per_prodotto": capacita_giornaliera_per_prodotto,
+        "capacita_giornaliera_complessiva": capacita_giornaliera_complessiva,
         "lavoro_per_prodotto_ore": {p.nome: dettagli[p]["lavoro_ore"] for p in dettagli},
         "linee_assegnate_dettaglio": {
             p.nome: dettagli[p]["linee_assegnate_dettaglio"] for p in dettagli
