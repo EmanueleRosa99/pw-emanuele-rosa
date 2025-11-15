@@ -1,17 +1,19 @@
 from typing import Dict, Tuple
-from models import Prodotto
 
+# Funzioni per le conversioni e formattazioni
 def _converti_ore_in_ore_minuti(ore_decimali: float) -> Tuple[int, int]:
+    
     ore_intere = int(ore_decimali)
-    minuti = int((ore_decimali - ore_intere) * 60)
+    minuti = round((ore_decimali - ore_intere) * 60)
+    
     return ore_intere, minuti
 
 
 def _converti_ore_in_giorni_ore(ore_decimali: float, ore_per_giorno: int = 24) -> Tuple[int, int]:
 
     giorni_interi = int(ore_decimali / ore_per_giorno)
-    ore_rimanenti = int(ore_decimali % ore_per_giorno)
-    
+    ore_rimanenti = round(ore_decimali % ore_per_giorno)
+
     return giorni_interi, ore_rimanenti
 
 
@@ -31,121 +33,135 @@ def _formatta_tempo_giorni(ore_decimali: float, ore_per_giorno: int = 24) -> str
         return f"{ore} ore"
     elif ore == 0:
         return f"{giorni} giorni"
-
+    
     return f"{giorni} giorni e {ore} ore"
 
 
-def output_simulazione_produzione(risultati: Dict[str, object]) -> None:
+def _formatta_tempo_unitario(ore_decimali: float) -> str:
 
-    larg = 96
+    ore, minuti = _converti_ore_in_ore_minuti(ore_decimali)
+    
+    if ore == 0:
+        return f"{minuti}min/capo"
+    elif minuti == 0:
+        return f"{ore}h/capo"
+    else:
+        return f"{ore}h e {minuti}min/capo"
+
+
+# Funzione per generare l'output mostrato in console
+def output_simulazione_produzione(risultati: Dict[str, object]) -> None:
+    
+    larghezza = 100
     ore_per_giorno = risultati['ore_per_giorno']
 
-    # Header
-    print("╔" + "═" * larg + "╗")
-    print(f" {'· SIMULAZIONE LOTTO PRODUZIONE ·':^{larg}}")
-    print("╚" + "═" * larg + "╝")
-    
+    print("\n" + "-" * larghezza)
+    print(f" {'SIMULAZIONE LOTTO PRODUZIONE':^{larghezza}}")
+    print("\n" + "-" * larghezza)
+        
     # Quantità prodotte
-    print("\nQuantità (capi):")
-    for p, q in risultati['quantita'].items():
-        print(f"  • {p.nome:20s}: {q:4d}")
+    print("\n [ QUANTITÀ DA PRODURRE ]")
+    for prodotto, quantita in risultati['quantita'].items():
+        print(f"  • {prodotto.nome:25s}: {quantita:4d} capi")
     
-    # Tempi unitari di produzione
-    print("\nTempi unitari di produzione (h/capo):")
-    for p, t in risultati['tempo_per_unita'].items():
-        print(f"  • {p.nome:20s}: {t:4.2f} h/capo")
+    # Tempi unitari di produzione (TEORICI e base)
+    print("\n [ TEMPI UNITARI DI PRODUZIONE (teorici di base) ]")
+    for prodotto, tempo in risultati['tempo_per_unita'].items():
+        tempo_formattato = _formatta_tempo_unitario(tempo)
+        print(f"  • {prodotto.nome:25s}: {tempo_formattato}")
     
-    # Capacità massima giornaliera per tipologia
-    print("\nCapacità massima giornaliera per tipologia (capi/giorno):")
-    for p, cap in risultati['capacita_giornaliera_per_prodotto'].items():
-        print(f"  • {p.nome:20s}: {cap:4d} capi/giorno")
+    # Configurazione impianto
+    print("\n [ CONFIGURAZIONE IMPIANTO ]")
+    print(f"  Numero linee produttive: {len(risultati['assegnazioni_linee'])}")
     
-    # Capacità giornaliera complessiva
-    print(f"\nCapacità giornaliera complessiva: {risultati['capacita_giornaliera_complessiva']} capi/giorno")
+
+    print("\n [ ASSEGNAZIONE LINEE E CAPACITÀ PRODUTTIVA ]")
+    for prodotto, linea in risultati['assegnazioni_linee'].items():
+        dati = risultati['risultati_per_prodotto'][prodotto]
+        tempo_teorico = risultati['tempo_per_unita'][prodotto]
+        tempo_effettivo = dati['tempo_effettivo']
+        carico_ore = risultati['quantita'][prodotto] * tempo_teorico
+        
+        tempo_teorico_format = _formatta_tempo_unitario(tempo_teorico)
+        tempo_effettivo_format = _formatta_tempo_unitario(tempo_effettivo)
+        carico_ore_format = _formatta_tempo_ore(carico_ore)
+        
+        print(f"\n  {prodotto.nome}:")
+        print(f"    ├─ Linea assegnata:              {linea.nome} (efficienza: {linea.coefficiente_efficienza:.2f})")
+        print(f"    ├─ Tempo teorico per unità:      {tempo_teorico_format}")
+        print(f"    ├─ Tempo effettivo sulla linea:  {tempo_effettivo_format}")
+        print(f"    ├─ Carico di lavoro teorico totale:      {carico_ore_format}")
+        print(f"    ├─ Capacità giornaliera:         {dati['capacita_giornaliera']} capi/giorno")
+        print(f"    ├─ Tempo di produzione:          {_formatta_tempo_ore(dati['ore_totali'])}")
+        print(f"    └─ Giorni necessari:             {dati['giorni_necessari']:.2f} giorni")
     
-    # Linee disponibili
-    impianto = risultati['impianto']
-    print(f"\nLinee disponibili (nome: capacità) e somma:")
-    print(f"  • Numero linee: {impianto.numero_linee}")
-    print(f"  • Capacità linee: {risultati['impianto_linee']}")
-    print(f"  • Capacità totale impianto: {risultati['capacita_totale_impianto']:.2f}")
     
-    # Tabella dettagli per prodotto
+    # Capacità complessiva
+    print(f"\n  [ CAPACITÀ GIORNALIERA COMPLESSIVA ]")
+    print(f"  • Totale impianto: {risultati['capacita_giornaliera_complessiva']} capi/giorno")
+    print(f"    (somma delle capacità di tutte le linee)")
+    
+    # Tabella dettagliata
     _stampa_tabella_dettaglio(risultati)
+    
+    # Riepilogo complessivo
     tempo_ore_formattato = _formatta_tempo_ore(risultati['durata_lotto_ore'])
     tempo_giorni_formattato = _formatta_tempo_giorni(risultati['durata_lotto_ore'], ore_per_giorno)
-
-
-    # Riepilogo complessivo
-    print("\nRiepilogo complessivo:")
-    print(f"  • Durata totale del lotto (Ore):    {tempo_ore_formattato}")
-    print(f"  • Durata totale del lotto (Giorni): {tempo_giorni_formattato}")
-
-
-def _stampa_tabella_dettaglio(risultati: dict, ore_per_giorno: int = 24) -> None:
-
-    nomi = list(risultati["lavoro_per_prodotto_ore"].keys())
-    tempi_ore_formattati = {}
-    tempi_giorni_formattati = {}
     
-    for nome in nomi:
-        ore = risultati["tempo_per_prodotto_ore"][nome]
-        tempi_ore_formattati[nome] = _formatta_tempo_ore(ore)
-        tempi_giorni_formattati[nome] = _formatta_tempo_giorni(ore, ore_per_giorno)
-        
-    # Calcolo larghezze colonne
-    w_prod = max(len("Prodotto"), max(len(n) for n in nomi))
-    w_lav = max(
-        len("Lavoro (ore.minuti)"),
-        max(len(f'{risultati["lavoro_per_prodotto_ore"][n]:.2f}') for n in nomi),
-    )
-    w_linee = max(
-        len("Linee assegnate"),
-        max(len(", ".join(risultati["linee_assegnate_dettaglio"][n]) or "-") for n in nomi),
-    )
-    w_cap = max(
-        len("Capacità (gg)"),
-        max(len(f'{risultati["capacita_totale_linee_assegnate"][n]:.2f}') for n in nomi),
-    )
-    w_t_ore = max(
-        len("Tempo (ore e minuti)"),
-        max(len(tempi_ore_formattati[n]) for n in nomi),
-    )
-    w_t_gio = max(
-        len("Tempo (giorni e ore)"),
-        max(len(tempi_giorni_formattati[n]) for n in nomi),
-    )
+    print("\n" + "-" * larghezza)
+    print(f" {' RIEPILOGO COMPLESSIVO ':^{larghezza}}")
+    print("\n" + "-" * larghezza)
+    print(f"\n   Durata totale del lotto:")
+    print(f"      • In ore:    {tempo_ore_formattato}")
+    print(f"      • In giorni: {tempo_giorni_formattato}")
+
+
+def _stampa_tabella_dettaglio(risultati: dict) -> None:
+    """Stampa una tabella riassuntiva dei dettagli per prodotto"""
     
-    # Header tabella
+    print("\n [ TABELLA RIASSUNTIVA ] ")
+    
+    # Header
     header = (
-        f"  {'Prodotto':^{w_prod}} | "
-        f"{'Lavoro (ore.minuti)':^{w_lav}} | "
-        f"{'Linee assegnate':^{w_linee}} | "
-        f"{'Capacità (gg)':^{w_cap}} | "
-        f"{'Tempo (ore e minuti)':^{w_t_ore}} | "
-        f"{'Tempo (giorni e ore)':^{w_t_gio}}"
+        f"  {'Prodotto':^25} | "
+        f"{'Quantità':^10} | "
+        f"{'Tempo base':^18} | "
+        f"{'Linea':^6} | "
+        f"{'Effic.':^7} | "
+        f"{'Tempo effettivo':^18} | "
+        f"{'Cap./gg':^9} | "
+        f"{'Tempo tot.':^20}"
     )
     sep = "  " + "-" * (len(header) - 2)
-    sep = "  " + "-" * (len(header) - 2)
     
-    print("\nDettaglio assegnazioni e tempi per prodotto:")
     print(header)
     print(sep)
     
-    # Righe tabella
-    for nome in nomi:
-        lavoro = risultati["lavoro_per_prodotto_ore"][nome]
-        linee_det = ", ".join(risultati["linee_assegnate_dettaglio"][nome]) or "-"
-        cap_tot = risultati["capacita_totale_linee_assegnate"][nome]
-        t_ore_fmt = tempi_ore_formattati[nome]
-        t_gio_fmt = tempi_giorni_formattati[nome]
+    # Righe
+    for prodotto in risultati['quantita'].keys():
+        qta = risultati['quantita'][prodotto]
+        tempo_base = risultati['tempo_per_unita'][prodotto]
+        linea = risultati['assegnazioni_linee'][prodotto]
+        tempo_effettivo = tempo_base / linea.coefficiente_efficienza
+        dati = risultati['risultati_per_prodotto'][prodotto]
+        
+        tempo_base_format = _formatta_tempo_unitario(tempo_base)
+        tempo_effettivo_format = _formatta_tempo_unitario(tempo_effettivo)
         
         riga = (
-            f"  {nome:<{w_prod}} | "
-            f"{lavoro:>{w_lav}.2f} | "
-            f"{linee_det:<{w_linee}} | "
-            f"{cap_tot:>{w_cap}.2f} | "
-            f"{t_ore_fmt:<{w_t_ore}} | "
-            f"{t_gio_fmt:<{w_t_gio}}"
+            f"  {prodotto.nome:<25} | "
+            f"{qta:^10d} | "
+            f"{tempo_base_format:^18} | "
+            f"{linea.nome:^6} | "
+            f"{linea.coefficiente_efficienza:^7.2f} | "
+            f"{tempo_effettivo_format:^18} | "
+            f"{dati['capacita_giornaliera']:^9d} | "
+            f"{_formatta_tempo_ore(dati['ore_totali']):^20}"
         )
         print(riga)
+    
+    print("\n  Legenda:")
+    print("    • Tempo base: tempo teorico per produrre un capo")
+    print("    • Effic.: coefficiente di efficienza della linea")
+    print("    • Tempo effettivo: tempo reale sulla linea = Tempo base / Efficienza")
+    print("    • Cap./gg: capacità giornaliera = 24 ore / Tempo effettivo di produzione")

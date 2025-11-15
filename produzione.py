@@ -1,159 +1,120 @@
 import random
-from typing import Dict, Tuple, List
-from models import Prodotto, Impianto
-
-_LINEE_RANGE: Tuple[int, int] = (4, 8)
-# La capacita di una linea può variare, in base alla modernità dei macchinari
-_CAPACITA_LINEA_RANGE: Tuple[float, float] = (0.8, 1.2)
+from typing import Dict, List, Tuple
+from models import Prodotto, LineaProduttiva, Impianto
 
 
+# Funzione per generare le quantità da produrre per ciascuna tipologia
+def genera_quantita_produzione(prodotti: List[Prodotto]) -> Dict[Prodotto, int]:
+    return {prodotto: random.randint(*prodotto.range_quantita_produzione) for prodotto in prodotti}
 
-def _genera_nomi_linee(n: int) -> List[str]:
-    # Restituisce nomi delle linee in ordine alfabetico
-    return [chr(ord('A') + i) for i in range(n)]
-
-# Funzione per generare randomicamente le quantita da produrre per ogni prodotto
-def genera_quantita_produzione(
-    prodotti: List[Prodotto],
-    quantita_min: int = 50,
-    quantita_max: int = 250,
-) -> Dict[Prodotto, int]:
-        
-    if quantita_min < 0 or quantita_max < quantita_min:
-        raise ValueError("Range quantità non valido")
-    
-    return {p: random.randint(quantita_min, quantita_max) for p in prodotti}
-
-
-# Genera i parametri configurabili per la simulazione
+# Funzione per generare i parametri configurabili
 def genera_parametri_configurabili(
     prodotti: List[Prodotto]
-) -> Tuple[Dict[Prodotto, float], Dict[Prodotto, int], int, Impianto]:
+) -> Tuple[Dict[Prodotto, float], Impianto]:
     
-    # Genera tempi di produzione per unità
+    # Genera tempi di produzione per unità (in ore)
     tempo_per_unita = {
-        p: round(random.uniform(*p.range_tempo_produzione), 2) for p in prodotti
-    }
-
-    # Genera capacità giornaliera per tipologia di prodotto
-    capacita_giornaliera_per_prodotto = {
-        p: random.randint(*p.range_capacita_giornaliera) for p in prodotti
+        prodotto: round(random.uniform(*prodotto.range_tempo_produzione), 2) 
+        for prodotto in prodotti
     }
     
-    # Genera linee di produzione
-    numero_linee = random.randint(*_LINEE_RANGE)
-    nomi_linee = _genera_nomi_linee(numero_linee)
-    linee = [
-        (nomi_linee[i], round(random.uniform(*_CAPACITA_LINEA_RANGE), 2)) 
-        for i in range(numero_linee)
+    # Crea 4 linee produttive con coefficienti di efficienza diversi
+    coefficienti = [
+        round(random.uniform(0.7, 1.0), 2),
+        round(random.uniform(0.8, 1.1), 2),
+        round(random.uniform(0.9, 1.2), 2),
+        round(random.uniform(1.0, 1.3), 2)
     ]
-    # Crea oggetto Impianto
+    
+    nomi_linee = ['A', 'B', 'C', 'D']
+    linee = [LineaProduttiva(nomi_linee[i], coefficienti[i]) for i in range(4)]
+    
     impianto = Impianto(linee)
     
-    # Calcola capacità giornaliera complessiva (ossia la somma delle capacità per prodotto)
-    capacita_giornaliera_complessiva = sum(capacita_giornaliera_per_prodotto.values())
- 
-    return (
-        tempo_per_unita, 
-        capacita_giornaliera_per_prodotto,
-        capacita_giornaliera_complessiva,
-        impianto
-    )
+    return tempo_per_unita, impianto
 
-def _alloca_linee(
-    lavoro_per_prodotto: Dict[Prodotto, float],
+
+def assegna_linee_a_prodotti(
+    prodotti: List[Prodotto],
+    quantita: Dict[Prodotto, int],
+    tempo_per_unita: Dict[Prodotto, float],
     impianto: Impianto
-) -> Dict[Prodotto, List[Tuple[str, float]]]:
+) -> Dict[Prodotto, LineaProduttiva]:
+
+    # Calcola il carico di lavoro totale per ogni prodotto (in ore)
+    carico_lavoro = {prodotto: quantita[prodotto] * tempo_per_unita[prodotto] for prodotto in prodotti}
     
-    # Alloca le linee alle tipologie da produrre, basandosi sul carico di lavoro richiesto per ciascuna di esse
-    linee_nominate = impianto.linee.copy()
+    # Ordina i prodotti per carico di lavoro decrescente
+    prodotti_ordinati = sorted(carico_lavoro.keys(), key=lambda prodotto: carico_lavoro[prodotto], reverse=True)
+    
+    # Ordina le linee per coefficiente decrescente
+    linee_ordinate = sorted(impianto.linee, key=lambda linea: linea.coefficiente_efficienza, reverse=True)
+    
+    # Assegna: prodotto con più carico → linea con efficienza migliore
+    assegnazioni = {}
+    for i, prodotto in enumerate(prodotti_ordinati):
+        assegnazioni[prodotto] = linee_ordinate[i]
+    
+    return assegnazioni
 
-    # Ordina prodotti e linee
-    prodotti = sorted(
-        lavoro_per_prodotto.keys(), 
-        key=lambda p: lavoro_per_prodotto[p], 
-        reverse=True
-    )
-    linee_nominate.sort(key=lambda lc: lc[1], reverse=True)
 
-    linee_assegnate: Dict[Prodotto, List[Tuple[str, float]]] = {p: [] for p in prodotti}
+def _arrotonda_tempo_in_minuti(ore_decimali: float) -> float:
 
-    for nome, capacita in linee_nominate:
-        def score(p: Prodotto) -> tuple:
-            capacita_prodotto = sum(c for _, c in linee_assegnate[p])
-            # Condizione se non ha ancora linee assegnate
-            if capacita_prodotto <= 1e-12:
-                return (float('inf'), lavoro_per_prodotto[p])
-            return (lavoro_per_prodotto[p] / capacita_prodotto, lavoro_per_prodotto[p])
-        
-        target = max(prodotti, key=score)
-        linee_assegnate[target].append((nome, capacita))
+    ore_intere = int(ore_decimali)
+    minuti_decimali = (ore_decimali - ore_intere) * 60
+    minuti_arrotondati = round(minuti_decimali)
+    return ore_intere + minuti_arrotondati / 60
 
-    return linee_assegnate
 
+# Funzione per calcolare le tempistiche di produzione
 def calcola_tempo_produzione_lotto(
     quantita: Dict[Prodotto, int],
     tempo_per_unita: Dict[Prodotto, float],
-    capacita_giornaliera_per_prodotto: Dict[Prodotto, int],
-    capacita_giornaliera_complessiva: int,
-    impianto: Impianto,
+    assegnazioni_linee: Dict[Prodotto, LineaProduttiva],
     ore_per_giorno: int = 24
 ) -> Dict[str, object]:
-   
-    # Tempo per prodotto su singola linea produttiva
-    lavoro_per_prodotto = {p: quantita[p] * tempo_per_unita[p] for p in quantita}
     
-    # Allocazione proporzionale delle linee (in base alla quantita di lavoro necessario alla produzione)
-    linee_per_prodotto = _alloca_linee(lavoro_per_prodotto, impianto)
+    risultati_per_prodotto = {}
     
-    # Calcolo tempi per prodotto con dettagli utili da mostrare in output
-    tempo_per_prodotto_ore: Dict[Prodotto, float] = {}
-    dettagli: Dict[Prodotto, dict] = {}
-    
-    for p, lavoro_ore in lavoro_per_prodotto.items():
-        cap_list = linee_per_prodotto[p]
-        capacita_tot = sum(c for _, c in cap_list)
-        ore = (lavoro_ore / capacita_tot) if capacita_tot > 0 else float("inf")
-        tempo_per_prodotto_ore[p] = round(ore, 2)
+    for prodotto, linea in assegnazioni_linee.items():
+        # Calcola tempo effettivo sulla linea
+        tempo_teorico = tempo_per_unita[prodotto]
+        tempo_effettivo_preciso = tempo_teorico / linea.coefficiente_efficienza
+        tempo_effettivo = _arrotonda_tempo_in_minuti(tempo_effettivo_preciso)
         
-        linee_label = [f"{nome}: {cap:.2f}" for nome, cap in cap_list]
-        dettagli[p] = {
-            "lavoro_ore": round(lavoro_ore, 2),
-            "linee_assegnate_dettaglio": linee_label,
-            "capacita_totale": round(capacita_tot, 2),
-            "totale_ore": round(ore, 2),
-            "totale_giorni": round(ore / max(1, ore_per_giorno), 3),
+        # Calcola capacità giornaliera usando il tempo effettivo arrotondato
+        capacita_giornaliera = int((ore_per_giorno * linea.coefficiente_efficienza) / tempo_teorico)
+        
+        # Ore totali necessarie usando il tempo effettivo
+        ore_totali = quantita[prodotto] * tempo_effettivo
+        
+        # Giorni necessari
+        giorni_necessari = ore_totali / ore_per_giorno
+        
+        risultati_per_prodotto[prodotto] = {
+            'linea_assegnata': linea,
+            'tempo_effettivo': tempo_effettivo,
+            'capacita_giornaliera': capacita_giornaliera,
+            'ore_totali': round(ore_totali, 2),
+            'giorni_necessari': round(giorni_necessari, 3)
         }
-
-    # Durata complessiva del lotto (in ore e giorni)
-    durata_ore = round(max(tempo_per_prodotto_ore.values()), 2)
-    durata_giorni = round(durata_ore / max(1, ore_per_giorno), 3)
-
-    # Dati per output
-    impianto_dettaglio = [f"{nome}: {cap:.2f}" for nome, cap in impianto.linee]
+    
+    # Durata complessiva del lotto
+    durata_ore = max(r['ore_totali'] for r in risultati_per_prodotto.values())
+    durata_giorni = durata_ore / ore_per_giorno
+    
+    # Capacità giornaliera complessiva
+    capacita_giornaliera_complessiva = sum(
+        risultato['capacita_giornaliera'] for risultato in risultati_per_prodotto.values()
+    )
     
     return {
-        "quantita": quantita,
-        "tempo_per_unita": tempo_per_unita,
-        "capacita_giornaliera_per_prodotto": capacita_giornaliera_per_prodotto,
-        "capacita_giornaliera_complessiva": capacita_giornaliera_complessiva,
-        "lavoro_per_prodotto_ore": {p.nome: dettagli[p]["lavoro_ore"] for p in dettagli},
-        "linee_assegnate_dettaglio": {
-            p.nome: dettagli[p]["linee_assegnate_dettaglio"] for p in dettagli
-        },
-        "capacita_totale_linee_assegnate": {
-            p.nome: dettagli[p]["capacita_totale"] for p in dettagli
-        },
-        "tempo_per_prodotto_ore": {
-            p.nome: dettagli[p]["totale_ore"] for p in dettagli
-        },
-        "tempo_per_prodotto_giorni": {
-            p.nome: dettagli[p]["totale_giorni"] for p in dettagli
-        },
-        "impianto": impianto,
-        "impianto_linee": impianto_dettaglio,
-        "capacita_totale_impianto": impianto.capacita_totale,
-        "durata_lotto_ore": durata_ore,
-        "durata_lotto_giorni": durata_giorni,
-        "ore_per_giorno": ore_per_giorno,
+        'quantita': quantita,
+        'tempo_per_unita': tempo_per_unita,
+        'assegnazioni_linee': assegnazioni_linee,
+        'risultati_per_prodotto': risultati_per_prodotto,
+        'capacita_giornaliera_complessiva': capacita_giornaliera_complessiva,
+        'durata_lotto_ore': round(durata_ore, 2),
+        'durata_lotto_giorni': round(durata_giorni, 3),
+        'ore_per_giorno': ore_per_giorno
     }
