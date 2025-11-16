@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulazione Produzione Tessile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Simulazione Lotto Produzione</h1>
+            <p>Sistema di pianificazione per l'industria tessile</p>
+        </header>
+
+        <div class="form-wrapper">
+            <form id="form-simulazione">
+                <div class="section">
+                    <h2>Quantità da Produrre</h2>
+                    
+                    <div class="input-group">
+                        <label>Giacche Invernali</label>
+                        <input type="number" name="quantita_giacche" min="30" max="120" placeholder="30-120 capi" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>T-Shirts</label>
+                        <input type="number" name="quantita_tshirt" min="100" max="250" placeholder="100-250 capi" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Felpe</label>
+                        <input type="number" name="quantita_felpe" min="65" max="190" placeholder="65-190 capi" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Pantaloni</label>
+                        <input type="number" name="quantita_pantaloni" min="50" max="170" placeholder="50-170 capi" required>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Efficienza Linee Produttive</h2>
+                    <p class="description">
+                        Inserire il coefficiente di efficienza per ciascuna linea (0.7 - 1.3).<br>
+                        Valori inferiori a 1.0 indicano linee meno efficienti, superiori a 1.0 linee più performanti.
+                    </p>
+                    
+                    <div class="grid-2">
+                        <div class="input-group">
+                            <label>Linea A</label>
+                            <input type="number" name="coeff_linea_a" min="0.7" max="1.3" step="0.01" placeholder="Es: 0.95" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Linea B</label>
+                            <input type="number" name="coeff_linea_b" min="0.7" max="1.3" step="0.01" placeholder="Es: 1.10" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Linea C</label>
+                            <input type="number" name="coeff_linea_c" min="0.7" max="1.3" step="0.01" placeholder="Es: 1.05" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Linea D</label>
+                            <input type="number" name="coeff_linea_d" min="0.7" max="1.3" step="0.01" placeholder="Es: 1.25" required>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">Avvia Simulazione</button>
+            </form>
+        </div>
+
+        <div id="risultati" class="hidden">
+            <h2>Risultati Simulazione</h2>
+            <div id="risultati-content"></div>
+        </div>
+
+        <div id="errori" class="hidden alert-error">
+            <h3>Errori di Validazione</h3>
+            <ul id="errori-content"></ul>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
