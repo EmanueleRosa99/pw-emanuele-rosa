@@ -50,12 +50,67 @@ def assegna_linee_a_prodotti(
     # Ordina le linee per coefficiente decrescente
     linee_ordinate = sorted(impianto.linee, key=lambda linea: linea.coefficiente_efficienza, reverse=True)
     
-    # Assegna: prodotto con più carico → linea con efficienza migliore
+    # Assegna: prodotto con più carico alla linea con efficienza migliore
     assegnazioni = {}
     for i, prodotto in enumerate(prodotti_ordinati):
         assegnazioni[prodotto] = linee_ordinate[i]
     
     return assegnazioni
+
+def valida_input_utente(data: dict, prodotti: list, modalita: str = 'automatico') -> list:
+    errori = []
+    
+    # Validazione quantità (obbligatoria in entrambe le modalità)
+    campi_quantita = ['quantita_giacche', 'quantita_tshirt', 'quantita_felpe', 'quantita_pantaloni']
+    for campo in campi_quantita:
+        if campo not in data or data[campo] is None or data[campo] == '':
+            errori.append(f"Il campo {campo} è obbligatorio")
+            continue
+        
+        try:
+            valore = int(data[campo])
+            if valore <= 0:
+                errori.append(f"{campo} deve essere maggiore di 0")
+            elif valore > 1000:
+                errori.append(f"{campo} non può superare 1000")
+        except (ValueError, TypeError):
+            errori.append(f"{campo} deve essere un numero intero valido")
+    
+    # Validazione parametri manuali
+    if modalita == 'manuale':
+        # Valida tempi di produzione
+        campi_tempo = ['tempo_giacche', 'tempo_tshirt', 'tempo_felpe', 'tempo_pantaloni']
+        for campo in campi_tempo:
+            if campo not in data or data[campo] is None or data[campo] == '':
+                errori.append(f"Il campo {campo} è obbligatorio in modalità manuale")
+                continue
+            
+            try:
+                valore = float(data[campo])
+                if valore <= 0:
+                    errori.append(f"{campo} deve essere maggiore di 0")
+                elif valore > 24:
+                    errori.append(f"{campo} non può superare 24 ore")
+            except (ValueError, TypeError):
+                errori.append(f"{campo} deve essere un numero valido")
+        
+        # Valida coefficienti linee
+        campi_coeff = ['coeff_linea_a', 'coeff_linea_b', 'coeff_linea_c', 'coeff_linea_d']
+        for campo in campi_coeff:
+            if campo not in data or data[campo] is None or data[campo] == '':
+                errori.append(f"Il campo {campo} è obbligatorio in modalità manuale")
+                continue
+            
+            try:
+                valore = float(data[campo])
+                if valore <= 0:
+                    errori.append(f"{campo} deve essere maggiore di 0")
+                elif valore > 2:
+                    errori.append(f"{campo} non può superare 2.0")
+            except (ValueError, TypeError):
+                errori.append(f"{campo} deve essere un numero valido")
+    
+    return errori
 
 
 def _arrotonda_tempo_in_minuti(ore_decimali: float) -> float:

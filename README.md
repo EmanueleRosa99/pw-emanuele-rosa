@@ -1,4 +1,4 @@
-# Simulatore di Produzione Tessile
+# Alla Moda 2.0
 
 Applicazione per la simulazione e pianificazione di lotti di produzione, per aziende operanti nel settore dell'alta moda. Il simulatore è basato su un impianto produttivo con quattro linee di lavoro e calcola tempi e capacità per la produzione di giacche invernali, t-shirt, felpe e pantaloni.
 
