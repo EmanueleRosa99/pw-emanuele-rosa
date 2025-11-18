@@ -62,13 +62,13 @@ def output_simulazione_produzione(risultati: Dict[str, object]) -> None:
     # Quantità prodotte
     print("\n [ QUANTITÀ DA PRODURRE ]")
     for prodotto, quantita in risultati['quantita'].items():
-        print(f"  • {prodotto.nome:25s}: {quantita:4d} capi")
+        print(f"  - {prodotto.nome:25s}: {quantita:4d} capi")
     
     # Tempi unitari di produzione (TEORICI e base)
     print("\n [ TEMPI UNITARI DI PRODUZIONE (teorici di base) ]")
     for prodotto, tempo in risultati['tempo_per_unita'].items():
         tempo_formattato = _formatta_tempo_unitario(tempo)
-        print(f"  • {prodotto.nome:25s}: {tempo_formattato}")
+        print(f"  - {prodotto.nome:25s}: {tempo_formattato}")
     
     # Configurazione impianto
     print("\n [ CONFIGURAZIONE IMPIANTO ]")
@@ -98,7 +98,7 @@ def output_simulazione_produzione(risultati: Dict[str, object]) -> None:
     
     # Capacità complessiva
     print(f"\n  [ CAPACITÀ GIORNALIERA COMPLESSIVA ]")
-    print(f"  • Totale impianto: {risultati['capacita_giornaliera_complessiva']} capi/giorno")
+    print(f"  - Totale impianto: {risultati['capacita_giornaliera_complessiva']} capi/giorno")
     print(f"    (somma delle capacità di tutte le linee)")
     
     # Tabella dettagliata
@@ -112,8 +112,8 @@ def output_simulazione_produzione(risultati: Dict[str, object]) -> None:
     print(f" {' RIEPILOGO COMPLESSIVO ':^{larghezza}}")
     print("\n" + "-" * larghezza)
     print(f"\n   Durata totale del lotto:")
-    print(f"      • In ore:    {tempo_ore_formattato}")
-    print(f"      • In giorni: {tempo_giorni_formattato}")
+    print(f"      - In ore:    {tempo_ore_formattato}")
+    print(f"      - In giorni: {tempo_giorni_formattato}")
 
 
 def _stampa_tabella_dettaglio(risultati: dict) -> None:
@@ -161,7 +161,7 @@ def _stampa_tabella_dettaglio(risultati: dict) -> None:
         print(riga)
     
     print("\n  Legenda:")
-    print("    • Tempo base: tempo teorico per produrre un capo")
-    print("    • Effic.: coefficiente di efficienza della linea")
-    print("    • Tempo effettivo: tempo reale sulla linea = Tempo base / Efficienza")
-    print("    • Cap./gg: capacità giornaliera = 24 ore / Tempo effettivo di produzione")
+    print("    - Tempo base: tempo teorico per produrre un capo")
+    print("    - Effic.: coefficiente di efficienza della linea")
+    print("    - Tempo effettivo: tempo reale sulla linea = Tempo base / Efficienza")
+    print("    - Cap./gg: capacità giornaliera = 24 ore / Tempo effettivo di produzione")
